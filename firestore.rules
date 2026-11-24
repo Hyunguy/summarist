@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+  match /users/{uid}/library/{bookId} {
+   allow read: if owner(uid);
+   allow create, update: if owner(uid)
+     && request.resource.data.keys().hasOnly(['book', 'saved', 'finished'])
+     && request.resource.data.book.id == bookId
+     && (!('saved' in request.resource.data) || request.resource.data.saved is bool)
+     && (!('finished' in request.resource.data) || request.resource.data.finished is bool);
+   allow delete: if owner(uid);
+  }
+  match /customers/{uid} {
+   allow read: if owner(uid);
+   match /subscriptions/{id} { allow read: if owner(uid); }
+   match /payments/{id} { allow read: if owner(uid); }
+   match /checkout_sessions/{id} {
+    allow read: if owner(uid);
+    allow create: if owner(uid)
+      && request.auth.token.firebase.sign_in_provider != 'anonymous'
+      && validCheckout();
+   }
+  }
+  function validCheckout() {
+   let data = request.resource.data;
+   let billing = get(/databases/$(database)/documents/config/billing).data;
+   return data.keys().hasOnly(['price', 'success_url', 'cancel_url', 'trial_period_days'])
+     && data.success_url == billing.origin + '/settings?checkout=success'
+     && data.cancel_url == billing.origin + '/choose-plan'
+     && ((data.price == billing.monthlyPrice && !('trial_period_days' in data))
+       || (data.price == billing.yearlyPrice && data.trial_period_days == 7));
+  }
+  match /products/{id} {
+   allow read: if true;
+   match /prices/{priceId} { allow read: if true; }
+   match /tax_rates/{taxId} { allow read: if true; }
+  }
+ }
+}

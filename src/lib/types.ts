@@ -1,0 +1,20 @@
+export type Book = {
+  id: string;
+  author: string;
+  title: string;
+  subTitle: string;
+  imageLink: string;
+  audioLink: string;
+  totalRating: number;
+  averageRating: number;
+  keyIdeas: number;
+  type: string;
+  status: string;
+  subscriptionRequired: boolean;
+  summary: string;
+  tags: string[];
+  bookDescription: string;
+  authorDescription: string;
+};
+export type Plan = "basic" | "premium" | "premium-plus";
+export type SavedBook = { book: Book; finished: boolean; saved: boolean };
